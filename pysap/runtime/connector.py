@@ -65,3 +65,24 @@ def connect(
     com_session = connection.Children(session_index)
 
     return Session(com_session)
+
+
+def open_connection(
+    description: str,
+    *,
+    session_index: int = 0,
+    sync: bool = True,
+    application: Any | None = None,
+) -> Session:
+    """Abre una conexión nueva por su descripción en SAP Logon y devuelve la sesión.
+
+    Args:
+        description: nombre de la entrada en SAP Logon (o cadena de conexión).
+        session_index: sesión a usar dentro de la conexión recién abierta.
+        sync: abrir de forma síncrona (espera a que esté lista).
+        application: GuiApplication ya resuelto (para tests/mock).
+    """
+    app = application if application is not None else _get_scripting_engine()
+    connection = app.OpenConnection(description, sync)
+    com_session = connection.Children(session_index)
+    return Session(com_session)

@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Any, TypeVar
 
 from pysap.objects.base import GuiComponent
-from pysap.runtime.errors import ComponentNotFoundError
+from pysap.runtime.errors import ComponentNotFoundError, SapMessageError
+from pysap.runtime.feedback import Status
 
 T = TypeVar("T", bound=GuiComponent)
 
@@ -52,6 +53,56 @@ class Session:
         """Atajo: abre una transacción en la ventana 0."""
         self._com.findById("wnd[0]/tbar[0]/okcd").Text = f"/n{tcode}"
         self._com.findById("wnd[0]").sendVKey(0)
+
+    def login(
+        self,
+        client: str,
+        user: str,
+        password: str,
+        language: str = "",
+    ) -> None:
+        """Rellena la pantalla de login (SAP Logon) y confirma con Enter.
+
+        Las credenciales se pasan como argumentos; nunca deben quedar
+        hardcodeadas ni versionadas (ver ADR-0002).
+        """
+        self._com.findById("wnd[0]/usr/txtRSYST-MANDT").Text = client
+        self._com.findById("wnd[0]/usr/txtRSYST-BNAME").Text = user
+        self._com.findById("wnd[0]/usr/pwdRSYST-BCODE").Text = password
+        if language:
+            self._com.findById("wnd[0]/usr/txtRSYST-LANGU").Text = language
+        self._com.findById("wnd[0]").sendVKey(0)
+
+    # --- feedback: barra de estado y popups ---
+
+    def status(self) -> Status:
+        """Lee la barra de estado de la ventana 0. Vacío si no existe."""
+        sbar = self._com.findById("wnd[0]/sbar", False)
+        if sbar is None:
+            return Status(type="", text="")
+        return Status(type=sbar.MessageType or "", text=sbar.Text or "")
+
+    def raise_on_error(self) -> None:
+        """Lanza :class:`SapMessageError` si la barra de estado reporta error/aborto."""
+        status = self.status()
+        if status.is_error:
+            raise SapMessageError(status.type, status.text)
+
+    def has_popup(self, window_index: int = 1) -> bool:
+        """True si existe una ventana modal (por defecto ``wnd[1]``)."""
+        return self._com.findById(f"wnd[{window_index}]", False) is not None
+
+    def send_vkey(self, key: int, window_index: int = 0) -> None:
+        """Envía una tecla virtual a la ventana indicada (0=Enter, 12=F12...)."""
+        self._com.findById(f"wnd[{window_index}]").sendVKey(key)
+
+    def confirm_popup(self, window_index: int = 1) -> None:
+        """Confirma el popup (Enter)."""
+        self.send_vkey(0, window_index)
+
+    def cancel_popup(self, window_index: int = 1) -> None:
+        """Cancela el popup (F12)."""
+        self.send_vkey(12, window_index)
 
     @property
     def info(self) -> Any:

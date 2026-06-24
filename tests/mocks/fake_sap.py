@@ -15,11 +15,20 @@ from typing import Any
 class FakeComponent:
     """Componente SAP falso. Registra interacciones para aserciones en tests."""
 
-    def __init__(self, id: str, type: str = "GuiComponent", name: str = "", text: str = "") -> None:
+    def __init__(
+        self,
+        id: str,
+        type: str = "GuiComponent",
+        name: str = "",
+        text: str = "",
+        message_type: str = "",
+    ) -> None:
         self.Id = id
         self.Type = type
         self.Name = name
         self.Text = text
+        # Solo relevante en la barra de estado (S/W/E/A/I).
+        self.MessageType = message_type
         # Banderas observables por los tests.
         self.pressed = False
         self.focused = False
@@ -83,7 +92,23 @@ class FakeApplication:
     """GuiApplication falso: raíz del modelo de objetos."""
 
     def __init__(self, connections: list[FakeConnection]) -> None:
+        self._connections = connections
         self.Children = FakeChildren(connections)
+        self.opened: list[str] = []
+
+    def OpenConnection(self, description: str, sync: bool = True) -> FakeConnection:
+        """Emula abrir una conexión nueva con una sesión en pantalla de login."""
+        self.opened.append(description)
+        session = FakeSession()
+        session.add(FakeComponent("wnd[0]", type="GuiMainWindow"))
+        session.add(FakeComponent("wnd[0]/usr/txtRSYST-MANDT", type="GuiTextField"))
+        session.add(FakeComponent("wnd[0]/usr/txtRSYST-BNAME", type="GuiTextField"))
+        session.add(FakeComponent("wnd[0]/usr/pwdRSYST-BCODE", type="GuiPasswordField"))
+        session.add(FakeComponent("wnd[0]/usr/txtRSYST-LANGU", type="GuiTextField"))
+        conn = FakeConnection([session])
+        self._connections.append(conn)
+        self.Children = FakeChildren(self._connections)
+        return conn
 
 
 def build_app(session: FakeSession) -> FakeApplication:
