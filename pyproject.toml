@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pysap"
+version = "0.1.0"
+description = "Marco Python para automatizar SAP vía SAP GUI Scripting API (COM)."
+requires-python = ">=3.12"
+dependencies = ["pywin32>=306"]
+
+[tool.setuptools.packages.find]
+include = ["pysap*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "sap: tests de integración que requieren una sesión SAP GUI real",
+]
+addopts = "-m 'not sap'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
