@@ -12,6 +12,9 @@ dependencies = ["pywin32>=306"]
 [tool.setuptools.packages.find]
 include = ["pysap*"]
 
+[tool.setuptools.package-data]
+pysap = ["py.typed", "*.pyi", "**/*.pyi"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
