@@ -21,3 +21,4 @@ commit correspondiente la referencia (ej. `Doc: ADR-0002 ...`). El orquestador
 
 - [ADR-0001 — Stack y arquitectura base](ADR-0001-stack-y-arquitectura.md)
 - [ADR-0002 — Estabilidad, conexión y feedback](ADR-0002-estabilidad-conexion-feedback.md)
+- [ADR-0003 — Arranque de SAP, configuración y login](ADR-0003-arranque-y-login.md)
