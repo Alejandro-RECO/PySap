@@ -105,7 +105,10 @@ def open_connection(
     connection = app.OpenConnection(description, sync)
 
     start = clock()
-    while connection.Children.Count <= session_index:
+    while True:
+        com_session = _resolve_session(app, connection, session_index)
+        if com_session is not None:
+            return Session(com_session)
         if clock() - start >= timeout:
             raise WaitTimeoutError(
                 f"Timeout ({timeout}s) esperando a que la conexión {description!r} "
@@ -113,5 +116,41 @@ def open_connection(
             )
         sleep(poll)
 
-    com_session = connection.Children(session_index)
-    return Session(com_session)
+
+def _resolve_session(app: Any, connection: Any, session_index: int) -> Any | None:
+    """Localiza el objeto COM de la sesión recién abierta, o ``None`` si aún no está.
+
+    En algunas versiones de SAP GUI la conexión devuelta por ``OpenConnection`` no
+    expone la sesión en sus ``Children``; la sesión cuelga del ``application``. Se
+    intenta primero la referencia devuelta y, si falla, se recorren las conexiones
+    del ``application`` desde la más reciente.
+    """
+    # 1) Referencia devuelta por OpenConnection.
+    session = _session_from(connection, session_index)
+    if session is not None:
+        return session
+
+    # 2) Fallback: recorre las conexiones del application (la nueva suele ir al final).
+    try:
+        total = app.Children.Count
+    except Exception:  # pragma: no cover - app sin Children utilizable
+        return None
+    for i in range(total - 1, -1, -1):
+        try:
+            conn = app.Children(i)
+        except Exception:  # pragma: no cover - índice volátil
+            continue
+        session = _session_from(conn, session_index)
+        if session is not None:
+            return session
+    return None
+
+
+def _session_from(connection: Any, session_index: int) -> Any | None:
+    """Devuelve ``connection.Children(session_index)`` si existe, si no ``None``."""
+    try:
+        if connection.Children.Count > session_index:
+            return connection.Children(session_index)
+    except Exception:  # pragma: no cover - referencia COM no consultable aún
+        return None
+    return None

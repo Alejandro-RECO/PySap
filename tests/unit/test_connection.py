@@ -7,7 +7,13 @@ import pytest
 from pysap import connect
 from pysap.runtime.connector import open_connection
 from pysap.runtime.errors import WaitTimeoutError
-from tests.mocks.fake_sap import FakeApplication, FakeComponent, FakeSession
+from tests.mocks.fake_sap import (
+    FakeApplication,
+    FakeChildren,
+    FakeComponent,
+    FakeConnection,
+    FakeSession,
+)
 
 
 def test_open_connection_crea_sesion():
@@ -90,3 +96,29 @@ def test_open_connection_timeout_si_no_aparece_sesion():
         open_connection(
             "PRD", application=app, sleep=lambda _: None, clock=_Clock(), timeout=30.0
         )
+
+
+class _AppRefSinSesion:
+    """OpenConnection devuelve una ref vacía; la sesión cuelga del application.
+
+    Reproduce el caso real (SAP GUI 750): la conexión abre y la sesión existe en
+    ``application.Children``, pero la referencia devuelta no la expone.
+    """
+
+    def __init__(self) -> None:
+        session = FakeSession()
+        session.add(FakeComponent("wnd[0]", type="GuiMainWindow"))
+        self._ref_vacia = FakeConnection([])  # ref devuelta: Children vacíos
+        conn_real = FakeConnection([session])  # sesión real colgando del app
+        self.Children = FakeChildren([conn_real])
+        self.opened: list[str] = []
+
+    def OpenConnection(self, description: str, sync: bool = True):
+        self.opened.append(description)
+        return self._ref_vacia
+
+
+def test_open_connection_resuelve_sesion_desde_application():
+    app = _AppRefSinSesion()
+    session = open_connection("SALUD CALIDAD", application=app, sleep=lambda _: None)
+    assert session.find("wnd[0]").type == "GuiMainWindow"
