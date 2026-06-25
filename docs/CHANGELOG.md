@@ -27,6 +27,19 @@ referencia los ADR y commits relevantes.
 - Mock ampliado (statusbar `MessageType`, popups `wnd[1]`, `OpenConnection`).
 - Tests: 22 verde (+14). ADR-0002 registrado.
 
+## 2026-06-25 — Fase 5 (parcial): arranque + login (ADR-0003)
+
+- **Config**: `pysap/config.py` `SapConfig` + `from_env()` con lector `.env`
+  propio (sin dependencia nueva); el entorno pisa al `.env`. `.env.example` +
+  `.gitignore` para `.env`. Credenciales fuera del repo.
+- **Arranque**: `pysap/runtime/launcher.py` `launch_sap()` — engancha si la ROT
+  responde; si no, lanza `saplogon.exe` y sondea con timeout. Todo inyectable.
+- **Integración**: `pysap/runtime/bootstrap.py` `start_session()` — arranque →
+  `open_connection` → login como `Process`/`Step`, verificado con feedback.
+- **Entrypoint**: `scripts/open_sap.py` ejecutable (`python scripts/open_sap.py`).
+- Nuevos errores: `MissingConfigError`, `SapLaunchError`. Mock: `sbar` en
+  `OpenConnection`. Tests: 36 verde (+14). ADR-0003 registrado.
+
 ### Pendiente (fases siguientes)
 - Fase 3: codegen PDF → 14 wrappers core + `.pyi`.
 - Fase 4: `mapping/page_object.py`; validación de tipo opcional en `find_as`.

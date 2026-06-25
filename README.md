@@ -43,6 +43,28 @@ docs/         decisions (ADR), CHANGELOG, referencia objetos
 .claude/skills/  orchestrator, codegen, tdd, commit
 ```
 
+## Abrir SAP y hacer login
+
+Configura las credenciales (nunca se versionan, ver ADR-0003): copia
+`.env.example` a `.env` y rellénalo, o exporta las variables `SAP_*`.
+
+```bash
+python scripts/open_sap.py            # usa .env si existe
+python scripts/open_sap.py --env ruta/al/.env
+```
+
+El script carga `SapConfig.from_env()`, arranca SAP si hace falta
+(`saplogon.exe`), abre la conexión y hace login dejando la sesión lista.
+
+Por código:
+
+```python
+from pysap import SapConfig, start_session
+
+session = start_session(SapConfig.from_env())
+session.start_transaction("VA01")
+```
+
 ## Tests
 
 ```bash
