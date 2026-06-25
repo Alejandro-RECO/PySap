@@ -38,3 +38,23 @@ class SapMessageError(PySapError):
         self.message_type = message_type
         self.text = text
         super().__init__(f"SAP [{message_type}]: {text}")
+
+
+class MissingConfigError(PySapError):
+    """Faltan variables de configuración obligatorias (credenciales/conexión).
+
+    Ver ADR-0003: la config se carga del entorno; nunca se versiona.
+    """
+
+    def __init__(self, missing: list[str]) -> None:
+        self.missing = list(missing)
+        nombres = ", ".join(self.missing)
+        super().__init__(f"Faltan variables de configuración obligatorias: {nombres}")
+
+
+class SapLaunchError(PySapError):
+    """No se pudo arrancar SAP GUI / enganchar la sesión de scripting.
+
+    Causas: ``saplogon.exe`` no se pudo lanzar, no hay ruta y la ROT no responde,
+    o se agotó el tiempo esperando a que el scripting engine estuviera disponible.
+    """

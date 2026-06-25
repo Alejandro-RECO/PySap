@@ -105,6 +105,7 @@ class FakeApplication:
         session.add(FakeComponent("wnd[0]/usr/txtRSYST-BNAME", type="GuiTextField"))
         session.add(FakeComponent("wnd[0]/usr/pwdRSYST-BCODE", type="GuiPasswordField"))
         session.add(FakeComponent("wnd[0]/usr/txtRSYST-LANGU", type="GuiTextField"))
+        session.add(FakeComponent("wnd[0]/sbar", type="GuiStatusbar"))
         conn = FakeConnection([session])
         self._connections.append(conn)
         self.Children = FakeChildren(self._connections)

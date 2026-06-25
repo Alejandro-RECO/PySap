@@ -28,3 +28,8 @@ Desktop.ini
 # PDF de trabajo (no versionar binario pesado)
 sap_gui_scripting_api.pdf
 sap_api.txt
+
+# Credenciales / config local (ADR-0003: nunca versionar)
+.env
+.env.*
+!.env.example
