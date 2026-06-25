@@ -11,10 +11,14 @@ Modelo de objetos (ver SAP GUI Scripting API):
 
 from __future__ import annotations
 
-from typing import Any
+import time
+from typing import Any, Callable
 
-from pysap.runtime.errors import SapNotRunningError
+from pysap.runtime.errors import SapNotRunningError, WaitTimeoutError
 from pysap.runtime.session import Session
+
+Sleeper = Callable[[float], None]
+Clock = Callable[[], float]
 
 
 def _get_scripting_engine() -> Any:
@@ -73,16 +77,41 @@ def open_connection(
     session_index: int = 0,
     sync: bool = True,
     application: Any | None = None,
+    sleep: Sleeper = time.sleep,
+    clock: Clock = time.perf_counter,
+    timeout: float = 30.0,
+    poll: float = 0.5,
 ) -> Session:
     """Abre una conexión nueva por su descripción en SAP Logon y devuelve la sesión.
+
+    SAP puebla la sesión de forma asíncrona: aunque ``OpenConnection`` sea
+    síncrona, ``connection.Children`` puede tardar en exponer la sesión. Se
+    sondea hasta que aparezca o se agote el tiempo (evita el error COM 614
+    "enumerator cannot find element with the specified index").
 
     Args:
         description: nombre de la entrada en SAP Logon (o cadena de conexión).
         session_index: sesión a usar dentro de la conexión recién abierta.
         sync: abrir de forma síncrona (espera a que esté lista).
         application: GuiApplication ya resuelto (para tests/mock).
+        sleep/clock: dependencias de tiempo (inyectables en tests).
+        timeout: segundos máximos esperando a que aparezca la sesión.
+        poll: segundos entre sondeos.
+
+    Raises:
+        WaitTimeoutError: si la sesión no aparece antes de ``timeout``.
     """
     app = application if application is not None else _get_scripting_engine()
     connection = app.OpenConnection(description, sync)
+
+    start = clock()
+    while connection.Children.Count <= session_index:
+        if clock() - start >= timeout:
+            raise WaitTimeoutError(
+                f"Timeout ({timeout}s) esperando a que la conexión {description!r} "
+                f"exponga la sesión índice {session_index}."
+            )
+        sleep(poll)
+
     com_session = connection.Children(session_index)
     return Session(com_session)
