@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest>=8.0
 ruff>=0.5
+pypdf>=4.0  # solo para regenerar wrappers desde el PDF (codegen, ADR-0004)
