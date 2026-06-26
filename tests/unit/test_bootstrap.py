@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from pysap.config import SapConfig
 from pysap.runtime.bootstrap import start_session

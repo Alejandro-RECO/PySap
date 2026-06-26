@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from pysap import connect
 from pysap.runtime.connector import open_connection
 from pysap.runtime.errors import WaitTimeoutError
 from tests.mocks.fake_sap import (
