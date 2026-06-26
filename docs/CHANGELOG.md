@@ -40,7 +40,27 @@ referencia los ADR y commits relevantes.
 - Nuevos errores: `MissingConfigError`, `SapLaunchError`. Mock: `sbar` en
   `OpenConnection`. Tests: 36 verde (+14). ADR-0003 registrado.
 
+## 2026-06-26 — Fase 3: codegen PDF → wrappers (ADR-0004)
+
+- **Codegen**: `pysap/codegen/` parsea el PDF oficial y emite wrappers tipados.
+  - `text_extract.py` (`extract_pdf_text`, usa `pypdf`), `normalize.py`
+    (`normalize`/`despace` limpian guiones suaves, glifos PUA y mayúsculas
+    partidas tipo `GuiT extField`), `typemap.py` (VB→Python), `pdf_parser.py`
+    (`parse_object`/`parse_all` → `ObjectSpec`/`Method`/`Property`/`Param`),
+    `emitter.py` (`emit_module`/`emit_stub`/`snake_case`, sanea keywords y
+    duplicados), `generate.py` (driver/CLI `python -m pysap.codegen.generate`).
+  - Detección de secciones por **línea que termina en `GuiX Object`** (evita
+    índice/refs cruzadas); solo se emiten **miembros propios** (los heredados van
+    por delegación COM).
+- **13 wrappers generados** (`.py` + `.pyi`) en `pysap/objects/`: GuiApplication,
+  GuiConnection, GuiSession, GuiMainWindow, GuiButton, GuiCTextField,
+  GuiPasswordField, GuiComboBox, GuiCheckBox, GuiRadioButton, GuiGridView,
+  GuiTree, GuiStatusbar. `GuiTextField` se mantiene a mano (sección degenerada
+  en el PDF). `objects/__init__.py` exporta los 14 + `GuiComponent`.
+- Tooling: `pypdf` añadido a `requirements-dev.txt` (solo regenerar).
+- Tests: 76 verde (+40), `ruff` limpio. ADR-0004 registrado.
+
 ### Pendiente (fases siguientes)
-- Fase 3: codegen PDF → 14 wrappers core + `.pyi`.
 - Fase 4: `mapping/page_object.py`; validación de tipo opcional en `find_as`.
-- Tooling: `pip install -r requirements-dev.txt` para correr `ruff`.
+- Codegen: encadenar la jerarquía SAP completa para tipar también los miembros
+  heredados (hoy funcionan por delegación, sin tipo estático).
