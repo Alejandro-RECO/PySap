@@ -60,7 +60,23 @@ referencia los ADR y commits relevantes.
 - Tooling: `pypdf` añadido a `requirements-dev.txt` (solo regenerar).
 - Tests: 76 verde (+40), `ruff` limpio. ADR-0004 registrado.
 
+## 2026-06-26 — Fase 4: Page Objects y validación de tipo (ADR-0005)
+
+- **Validación**: `Session.find_as(path, kind, *, validate=False)`. Con
+  `validate=True` compara `com.Type` con `kind.sap_type`/`kind.__name__` y lanza
+  `ComponentTypeError` si no coincide. El genérico `GuiComponent` no se valida.
+- **Page Object**: `pysap/mapping/page_object.py`:
+  - `PageObject(session, registry)` con `find(nombre)` y
+    `find_as(nombre, kind, *, validate=True)` que resuelven el nombre lógico vía
+    `PathRegistry`.
+  - `Field(nombre, kind=None)`: descriptor para page objects declarativos con
+    autocompletado (usa los wrappers de Fase 3).
+- Nuevo error `ComponentTypeError` (path, esperado, hallado); exportado en
+  `pysap` y en `pysap.mapping` (`PageObject`, `Field`).
+- Tests: 86 verde (+10), `ruff` limpio. ADR-0005 registrado.
+
 ### Pendiente (fases siguientes)
-- Fase 4: `mapping/page_object.py`; validación de tipo opcional en `find_as`.
 - Codegen: encadenar la jerarquía SAP completa para tipar también los miembros
   heredados (hoy funcionan por delegación, sin tipo estático).
+- Telemetría avanzada (ADR-0001 Fase 4): agregados/percentiles sobre
+  `ProcessReport`.
