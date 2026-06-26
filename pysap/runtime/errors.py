@@ -23,6 +23,18 @@ class ComponentNotFoundError(PySapError):
         super().__init__(f"No se encontró el componente SAP con path: {path!r}")
 
 
+class ComponentTypeError(PySapError):
+    """El componente existe pero su tipo SAP no es el esperado (ver ADR-0005)."""
+
+    def __init__(self, path: str, expected: str, found: str) -> None:
+        self.path = path
+        self.expected = expected
+        self.found = found
+        super().__init__(
+            f"El componente {path!r} es de tipo {found!r}, se esperaba {expected!r}."
+        )
+
+
 class StepError(PySapError):
     """Falló la ejecución o la verificación de un Step."""
 

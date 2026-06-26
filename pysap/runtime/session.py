@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Any, TypeVar
 
 from pysap.objects.base import GuiComponent
-from pysap.runtime.errors import ComponentNotFoundError, SapMessageError
+from pysap.runtime.errors import (
+    ComponentNotFoundError,
+    ComponentTypeError,
+    SapMessageError,
+)
 from pysap.runtime.feedback import Status
 
 T = TypeVar("T", bound=GuiComponent)
@@ -36,17 +40,30 @@ class Session:
             raise ComponentNotFoundError(path)
         return GuiComponent(com_obj)
 
-    def find_as(self, path: str, kind: type[T]) -> T:
+    def find_as(self, path: str, kind: type[T], *, validate: bool = False) -> T:
         """Como :meth:`find` pero devuelve el tipo de wrapper indicado.
 
         Da autocompletado fuerte en el editor::
 
             boton = session.find_as("wnd[0]/tbar[0]/btn[0]", GuiButton)
             boton.press()
+
+        Args:
+            path: ``id``/path del control.
+            kind: clase de wrapper a devolver.
+            validate: si es ``True``, comprueba que el tipo SAP del control
+                coincida con el esperado y lanza :class:`ComponentTypeError` si
+                no. El esperado es ``kind.sap_type`` o, si falta, ``kind.__name__``.
+                El genérico :class:`GuiComponent` nunca se valida (ver ADR-0005).
         """
         com_obj = self._com.findById(path, False)
         if com_obj is None:
             raise ComponentNotFoundError(path)
+        if validate and kind is not GuiComponent:
+            expected = getattr(kind, "sap_type", kind.__name__)
+            found = com_obj.Type
+            if found != expected:
+                raise ComponentTypeError(path, expected, found)
         return kind(com_obj)
 
     def start_transaction(self, tcode: str) -> None:
