@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pysap"
 version = "0.1.0"
 description = "Marco Python para automatizar SAP vía SAP GUI Scripting API (COM)."
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = ["pywin32>=306"]
 
 [tool.setuptools.packages.find]
@@ -24,4 +24,4 @@ addopts = "-m 'not sap'"
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
