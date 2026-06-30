@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from pysap.runtime.errors import ComponentNotFoundError
+from pysap.objects import GuiButton, GuiTextField
+from pysap.runtime.errors import ComponentNotFoundError, ComponentTypeError
 from tests.mocks.fake_sap import FakeComponent
 
 # --- find_by_name -----------------------------------------------------------
@@ -78,3 +79,37 @@ def test_find_by_id_suffix_inexistente_lanza_error(session):
 
 def test_find_by_id_suffix_inexistente_sin_raise_devuelve_none(session):
     assert session.find_by_id_suffix("noExisteJamas", raise_=False) is None
+
+
+# --- find_by_id_suffix con kind tipado (ADR-0006) ---------------------------
+
+
+def test_find_by_id_suffix_kind_devuelve_wrapper_tipado(session):
+    campo = session.find_by_id_suffix("txtF1", GuiTextField)  # Arrange + Act
+    assert isinstance(campo, GuiTextField)  # Assert
+    assert campo.id == "wnd[0]/usr/txtF1"
+
+
+def test_find_by_id_suffix_kind_tipo_erroneo_lanza_error(session):
+    # txtF1 es GuiTextField; pedir GuiButton con validación debe fallar.
+    with pytest.raises(ComponentTypeError):
+        session.find_by_id_suffix("txtF1", GuiButton)
+
+
+def test_find_by_id_suffix_kind_sin_validar_no_comprueba_tipo(session):
+    campo = session.find_by_id_suffix("txtF1", GuiButton, validate=False)
+    assert isinstance(campo, GuiButton)  # se envuelve sin validar el tipo SAP
+
+
+def test_find_by_id_suffix_kind_con_root_y_validacion(session):
+    raiz = FakeComponent("wnd[0]", type="GuiMainWindow")
+    boton = FakeComponent(
+        "wnd[0]/usr/subSUB:SAPLXXXX:0100/btnGUARDAR",
+        type="GuiButton",
+        name="btnGUARDAR",
+    )
+    raiz.add_child(boton)
+    comp = session.find_by_id_suffix("btnGUARDAR", GuiButton, root=raiz)
+    assert isinstance(comp, GuiButton)
+    comp.press()
+    assert comp.com.pressed is True
