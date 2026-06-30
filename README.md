@@ -105,6 +105,25 @@ session = start_session(SapConfig.from_env())
 session.start_transaction("VA01")
 ```
 
+### Credenciales desde tu clase Settings
+
+Si tu proyecto ya tiene una clase `Settings` (p.ej. pydantic `BaseSettings`),
+aliméntalo directo con `from_settings` —sin exportar al entorno (ADR-0007):
+
+```python
+from pysap import SapConfig, start_session
+
+session = start_session(SapConfig.from_settings(settings))   # atributos sap_*
+
+# Si tu Settings usa otros nombres, pasa el mapeo:
+cfg = SapConfig.from_settings(settings, mapping={
+    "connection": "sap_conn", "client": "mandante",
+    "user": "usuario", "password": "clave",
+})
+```
+
+PySap lee los valores por atributo (no depende de pydantic).
+
 ## Tests
 
 ```bash
