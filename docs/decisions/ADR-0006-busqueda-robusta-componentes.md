@@ -68,3 +68,19 @@ Lógica útil, pero huérfana del paquete y con `except: pass` (tragaba todo err
   empieza a romperse a menudo, la evolución limpia no es duplicar métodos en
   `PageObject`, sino enseñar al registry **estrategias de resolución**
   (exacto / sufijo / nombre) en un único punto. Pospuesto por YAGNI.
+
+## Extensión (2026-06-30) — `kind` tipado en `find_by_id_suffix`
+
+`find_by_id_suffix` devolvía siempre `GuiComponent` genérico, lo que obligaba a
+envolver a mano para tener autocompletado y forzaba `find_by_id_suffix("x", Kind)`
+a fallar con `TypeError` (no aceptaba un segundo posicional).
+
+- Se añade un parámetro `kind: type[T] = GuiComponent` (segundo posicional) y
+  `validate: bool = True`, replicando el contrato de `find_as` (ADR-0005): con un
+  `kind` distinto del genérico, valida el tipo SAP y lanza `ComponentTypeError`
+  si no coincide. Sin `kind`, el comportamiento previo se mantiene (genérico).
+- No es una decisión arquitectónica nueva: reusa el patrón ya aceptado en
+  ADR-0005; por eso se registra como extensión de este ADR, no como ADR aparte.
+- `find_by_name`/`find_all_by_name` siguen devolviendo `GuiComponent` (ya reciben
+  el tipo SAP como string para la búsqueda COM); se tiparán igual si surge la
+  necesidad.

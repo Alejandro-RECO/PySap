@@ -99,6 +99,17 @@ referencia los ADR y commits relevantes.
 - Mock ampliado (`Children` jerárquico, `__iter__`, `findByName`,
   `findAllByName`). Tests: 96 verde (+10), `ruff` limpio. ADR-0006 registrado.
 
+## 2026-06-30 — find_by_id_suffix tipado (extensión ADR-0006)
+
+- **`find_by_id_suffix(suffix, kind=GuiComponent, *, root=None, raise_=True,
+  validate=True)`**: ahora acepta un `kind` (segundo posicional) y devuelve el
+  wrapper tipado, igual que `find_as`. Antes solo devolvía `GuiComponent` y
+  `find_by_id_suffix("x", Kind)` fallaba con `TypeError`.
+- Con `kind` distinto del genérico valida el tipo SAP (`ComponentTypeError`);
+  `validate=False` lo omite. Sin `kind`, comportamiento previo intacto.
+- Tests: 100 verde (+4), `ruff` limpio. Documentado como extensión de ADR-0006.
+  Rama `feature/find-suffix-tipado`.
+
 ### Pendiente (fases siguientes)
 - Codegen: encadenar la jerarquía SAP completa para tipar también los miembros
   heredados (hoy funcionan por delegación, sin tipo estático).
