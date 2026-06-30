@@ -25,6 +25,21 @@ _OPCIONALES = {
     "SAP_LOGON_PATH": "logon_path",
 }
 
+# Campos de SapConfig, derivados de los mapeos anteriores (sin duplicar).
+_CAMPOS_OBLIGATORIOS = tuple(_OBLIGATORIAS.values())
+_CAMPOS_OPCIONALES = tuple(_OPCIONALES.values())
+
+# Mapeo por defecto campo de SapConfig -> atributo en la clase Settings
+# (convención sap_* snake_case, la típica de pydantic BaseSettings sobre SAP_*).
+_SETTINGS_MAP = {
+    "connection": "sap_connection",
+    "client": "sap_client",
+    "user": "sap_user",
+    "password": "sap_password",
+    "language": "sap_lang",
+    "logon_path": "sap_logon_path",
+}
+
 
 def _read_dotenv(path: str) -> dict[str, str]:
     """Lee un archivo ``.env`` simple (``KEY=VALUE``).
@@ -85,4 +100,42 @@ class SapConfig:
 
         campos = {attr: valores[var] for var, attr in _OBLIGATORIAS.items()}
         campos.update({attr: valores.get(var, "") for var, attr in _OPCIONALES.items()})
+        return cls(**campos)
+
+    @classmethod
+    def from_settings(
+        cls,
+        settings: object,
+        *,
+        mapping: Mapping[str, str] | None = None,
+    ) -> SapConfig:
+        """Construye la config desde un objeto de settings (p.ej. pydantic
+        ``BaseSettings``).
+
+        Lee los valores por atributo (duck typing): no acopla PySap a pydantic
+        ni a ninguna librería; sirve cualquier objeto con los atributos
+        esperados (ver ADR-0007).
+
+        Args:
+            settings: objeto cuyos atributos contienen la configuración SAP.
+            mapping: mapa ``{campo_SapConfig: atributo_en_settings}``; por
+                defecto :data:`_SETTINGS_MAP` (convención ``sap_*``). Pásalo si
+                tu ``Settings`` usa otros nombres.
+
+        Raises:
+            MissingConfigError: si falta alguna variable obligatoria.
+        """
+        m = mapping or _SETTINGS_MAP
+        valores: dict[str, str] = {}
+        for campo, attr in m.items():
+            valor = getattr(settings, attr, None)
+            # pydantic puede entregar SecretStr/int: se normaliza a str.
+            if valor is not None and str(valor) != "":
+                valores[campo] = str(valor)
+
+        faltantes = [m.get(campo, campo) for campo in _CAMPOS_OBLIGATORIOS if not valores.get(campo)]
+        if faltantes:
+            raise MissingConfigError(faltantes)
+
+        campos = {c: valores.get(c, "") for c in (*_CAMPOS_OBLIGATORIOS, *_CAMPOS_OPCIONALES)}
         return cls(**campos)

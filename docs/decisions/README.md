@@ -25,3 +25,4 @@ commit correspondiente la referencia (ej. `Doc: ADR-0002 ...`). El orquestador
 - [ADR-0004 — Codegen: wrappers tipados desde el PDF](ADR-0004-codegen-pdf-wrappers.md)
 - [ADR-0005 — Page Objects y validación de tipo en find_as](ADR-0005-mapping-pageobject-validacion.md)
 - [ADR-0006 — Búsqueda robusta de componentes (sufijo de id y nombre)](ADR-0006-busqueda-robusta-componentes.md)
+- [ADR-0007 — Credenciales de SapConfig desde una clase Settings](ADR-0007-credenciales-desde-settings.md)

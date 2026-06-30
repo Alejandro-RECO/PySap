@@ -323,8 +323,20 @@ Métodos: `register(name, path)`, `path(name)` (lanza `KeyError` claro si falta)
   2. El **entorno real pisa al `.env`** (`valores.update(base)`).
   3. Valida obligatorias; si falta alguna → `MissingConfigError(faltantes)`.
 
-Mapeos `_OBLIGATORIAS`/`_OPCIONALES` traducen `SAP_*` → atributos. Las
-credenciales **nunca se versionan** (ADR-0003); el `.env` está en `.gitignore`.
+- **`from_settings(settings, *, mapping=None)`** (ADR-0007) construye la config
+  desde un objeto de settings (p.ej. pydantic `BaseSettings` del proyecto que usa
+  PySap):
+  1. Lee cada valor por **atributo** (`getattr`) según el mapeo — *duck typing*,
+     sin importar pydantic ni sumar dependencia.
+  2. `mapping` traduce `{campo_SapConfig: atributo_en_settings}`; por defecto
+     `_SETTINGS_MAP` (convención `sap_*`). Pásalo si tu `Settings` usa otros nombres.
+  3. Normaliza a `str` (soporta `SecretStr`/`int`), valida obligatorias →
+     `MissingConfigError` con el nombre del atributo ausente.
+
+Mapeos `_OBLIGATORIAS`/`_OPCIONALES` traducen `SAP_*` → atributos; las listas
+`_CAMPOS_OBLIGATORIOS`/`_CAMPOS_OPCIONALES` se derivan de ellos y las comparte
+`from_settings`. Las credenciales **nunca se versionan** (ADR-0003); el `.env`
+está en `.gitignore`.
 
 ---
 
