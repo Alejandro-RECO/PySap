@@ -99,18 +99,16 @@ referencia los ADR y commits relevantes.
 - Mock ampliado (`Children` jerárquico, `__iter__`, `findByName`,
   `findAllByName`). Tests: 96 verde (+10), `ruff` limpio. ADR-0006 registrado.
 
-## 2026-06-30 — Credenciales desde Settings (ADR-0007)
+## 2026-06-30 — find_by_id_suffix tipado (extensión ADR-0006)
 
-- **`SapConfig.from_settings(settings, *, mapping=None)`**: construye la config
-  desde un objeto de settings (p.ej. pydantic `BaseSettings`), leyendo por
-  atributo (duck typing). PySap **no** depende de pydantic.
-- **Mapeo configurable**: por defecto `_SETTINGS_MAP` (`sap_*` snake_case); con
-  otros nombres se pasa `mapping={campo_SapConfig: atributo_en_settings}`.
-- Reusa `MissingConfigError` (reporta el atributo ausente) y normaliza valores a
-  `str` (soporta `SecretStr`/`int` de pydantic). Listas de campos derivadas de
-  los mapeos existentes (sin duplicar).
-- Tests: 100 verde (+4), `ruff` limpio. ADR-0007 registrado. Trabajado en rama
-  `feature/sapconfig-from-settings` (metodología dev/QA).
+- **`find_by_id_suffix(suffix, kind=GuiComponent, *, root=None, raise_=True,
+  validate=True)`**: ahora acepta un `kind` (segundo posicional) y devuelve el
+  wrapper tipado, igual que `find_as`. Antes solo devolvía `GuiComponent` y
+  `find_by_id_suffix("x", Kind)` fallaba con `TypeError`.
+- Con `kind` distinto del genérico valida el tipo SAP (`ComponentTypeError`);
+  `validate=False` lo omite. Sin `kind`, comportamiento previo intacto.
+- Tests: 100 verde (+4), `ruff` limpio. Documentado como extensión de ADR-0006.
+  Rama `feature/find-suffix-tipado`.
 
 ### Pendiente (fases siguientes)
 - Codegen: encadenar la jerarquía SAP completa para tipar también los miembros

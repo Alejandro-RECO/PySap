@@ -123,10 +123,12 @@ métodos:
 path cambia (índices de fila, subscreens, dynpros). Estos modos no dependen del
 path completo y devuelven `GuiComponent` (lanzan `ComponentNotFoundError`, o
 `None` con `raise_=False`):
-- `find_by_id_suffix(suffix, *, root=None)` → recorre `Children` en profundidad y
-  devuelve el primer control cuyo `id` **termine** en `suffix`. Para paths con
-  prefijo variable y final estable (`.../btnGUARDAR`). Integra la antigua
-  `buscar_por_id_parcial`.
+- `find_by_id_suffix(suffix, kind=GuiComponent, *, root=None, validate=True)` →
+  recorre `Children` en profundidad y devuelve el primer control cuyo `id`
+  **termine** en `suffix`. Para paths con prefijo variable y final estable
+  (`.../btnGUARDAR`). Integra la antigua `buscar_por_id_parcial`. Con `kind`
+  devuelve el wrapper **tipado** y valida el tipo (como `find_as`):
+  `session.find_by_id_suffix("ctxtGD-TAB", GuiTextField).text = "VBRP"`.
 - `find_by_name(name, sap_type)` → COM `findByName`: primer control por **nombre +
   tipo**. Solo fiable en objetos de dynpro (la mayoría de controles no tiene
   `Name` útil).
