@@ -80,24 +80,35 @@ class Session:
     def find_by_id_suffix(
         self,
         suffix: str,
+        kind: type[T] = GuiComponent,  # type: ignore[assignment]
         *,
         root: GuiComponent | Any = None,
         raise_: bool = True,
-    ) -> GuiComponent | None:
+        validate: bool = True,
+    ) -> T | None:
         """Busca recursivamente un control cuyo ``id`` termine en ``suffix``.
 
         Útil cuando SAP cambia el prefijo del path (índices de fila, subscreens)
         pero el final del ``id`` es estable. Recorre el árbol ``Children`` y
-        devuelve la primera coincidencia en orden de profundidad::
+        devuelve la primera coincidencia en orden de profundidad.
 
-            boton = session.find_by_id_suffix("btnGUARDAR")
+        Sin ``kind`` devuelve un :class:`GuiComponent` genérico; con ``kind``
+        devuelve ese wrapper tipado (autocompletado), igual que :meth:`find_as`::
+
+            boton = session.find_by_id_suffix("btnGUARDAR")               # genérico
+            campo = session.find_by_id_suffix("ctxtGD-TAB", GuiTextField) # tipado
+            campo.text = "VBRP"
 
         Args:
             suffix: cadena con la que debe terminar el ``id``.
+            kind: clase de wrapper a devolver (por defecto :class:`GuiComponent`).
             root: contenedor desde el que buscar (wrapper o COM). Por defecto,
                 la raíz de la sesión.
             raise_: si ``True`` (por defecto) lanza :class:`ComponentNotFoundError`
                 cuando no hay coincidencia; si ``False`` devuelve ``None``.
+            validate: si ``True`` y se indica un ``kind`` distinto de
+                :class:`GuiComponent`, comprueba que el tipo SAP del control
+                coincida y lanza :class:`ComponentTypeError` si no (ver ADR-0005).
         """
         if isinstance(root, GuiComponent):
             container = root.com
@@ -108,7 +119,12 @@ class Session:
             if raise_:
                 raise ComponentNotFoundError(f"*{suffix}")
             return None
-        return GuiComponent(com_obj)
+        if validate and kind is not GuiComponent:
+            expected = getattr(kind, "sap_type", kind.__name__)
+            found = com_obj.Type
+            if found != expected:
+                raise ComponentTypeError(f"*{suffix}", expected, found)
+        return kind(com_obj)
 
     @staticmethod
     def _search_id_suffix(container: Any, suffix: str) -> Any:
