@@ -29,6 +29,10 @@ Desktop.ini
 sap_gui_scripting_api.pdf
 sap_api.txt
 
+# Material auxiliar fuera del paquete (demos sueltas, grabaciones del SAP recorder)
+demo/
+vbs/
+
 # Credenciales / config local (ADR-0003: nunca versionar)
 .env
 .env.*
