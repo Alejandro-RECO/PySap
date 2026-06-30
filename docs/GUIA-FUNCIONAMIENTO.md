@@ -123,10 +123,12 @@ métodos:
 path cambia (índices de fila, subscreens, dynpros). Estos modos no dependen del
 path completo y devuelven `GuiComponent` (lanzan `ComponentNotFoundError`, o
 `None` con `raise_=False`):
-- `find_by_id_suffix(suffix, *, root=None)` → recorre `Children` en profundidad y
-  devuelve el primer control cuyo `id` **termine** en `suffix`. Para paths con
-  prefijo variable y final estable (`.../btnGUARDAR`). Integra la antigua
-  `buscar_por_id_parcial`.
+- `find_by_id_suffix(suffix, kind=GuiComponent, *, root=None, validate=True)` →
+  recorre `Children` en profundidad y devuelve el primer control cuyo `id`
+  **termine** en `suffix`. Para paths con prefijo variable y final estable
+  (`.../btnGUARDAR`). Integra la antigua `buscar_por_id_parcial`. Con `kind`
+  devuelve el wrapper **tipado** y valida el tipo (como `find_as`):
+  `session.find_by_id_suffix("ctxtGD-TAB", GuiTextField).text = "VBRP"`.
 - `find_by_name(name, sap_type)` → COM `findByName`: primer control por **nombre +
   tipo**. Solo fiable en objetos de dynpro (la mayoría de controles no tiene
   `Name` útil).
@@ -321,8 +323,20 @@ Métodos: `register(name, path)`, `path(name)` (lanza `KeyError` claro si falta)
   2. El **entorno real pisa al `.env`** (`valores.update(base)`).
   3. Valida obligatorias; si falta alguna → `MissingConfigError(faltantes)`.
 
-Mapeos `_OBLIGATORIAS`/`_OPCIONALES` traducen `SAP_*` → atributos. Las
-credenciales **nunca se versionan** (ADR-0003); el `.env` está en `.gitignore`.
+- **`from_settings(settings, *, mapping=None)`** (ADR-0007) construye la config
+  desde un objeto de settings (p.ej. pydantic `BaseSettings` del proyecto que usa
+  PySap):
+  1. Lee cada valor por **atributo** (`getattr`) según el mapeo — *duck typing*,
+     sin importar pydantic ni sumar dependencia.
+  2. `mapping` traduce `{campo_SapConfig: atributo_en_settings}`; por defecto
+     `_SETTINGS_MAP` (convención `sap_*`). Pásalo si tu `Settings` usa otros nombres.
+  3. Normaliza a `str` (soporta `SecretStr`/`int`), valida obligatorias →
+     `MissingConfigError` con el nombre del atributo ausente.
+
+Mapeos `_OBLIGATORIAS`/`_OPCIONALES` traducen `SAP_*` → atributos; las listas
+`_CAMPOS_OBLIGATORIOS`/`_CAMPOS_OPCIONALES` se derivan de ellos y las comparte
+`from_settings`. Las credenciales **nunca se versionan** (ADR-0003); el `.env`
+está en `.gitignore`.
 
 ---
 
