@@ -2,7 +2,7 @@
 
 > Guía operativa para validar lo construido (Fases 1–5) contra una sesión SAP
 > real. No es código de producción: son los pasos que **tú** ejecutas. Si algo
-> falla, ve a la sección [9. Problemas](#9-problemas-y-como-reportarlos) y me
+> falla, ve a la sección [10. Problemas](#10-problemas-y-como-reportarlos) y me
 > envías el bloque indicado.
 
 **Objetivo del demo:** abrir SAP, hacer login automático y ejecutar un proceso
@@ -59,7 +59,7 @@ Verifica que los tests pasan (sin SAP, con mock):
 pytest -q
 ```
 
-Esperado: `86 passed, 1 deselected`. Si falla aquí, **párate** y repórtalo
+Esperado: `96 passed, 1 deselected`. Si falla aquí, **párate** y repórtalo
 (problema de entorno, no de SAP).
 
 ---
@@ -245,7 +245,61 @@ con reintentos y verificación, telemetría (`ProcessReport`).
 
 ---
 
-## 9. Problemas y cómo reportarlos
+## 9. Demo D — búsqueda robusta cuando el path es inestable
+
+A veces el path capturado en el paso 5 **deja de funcionar**: SAP cambió un
+índice de fila, un subscreen o el dynpro, y `find`/`find_as` lanzan
+`ComponentNotFoundError` aunque el control siga en pantalla. Para eso están los
+modos de búsqueda que no dependen del path completo (ADR-0006).
+
+Crea `demo_d.py` y ajusta los valores a tu pantalla:
+
+```python
+from pysap import SapConfig, start_session
+
+session = start_session(SapConfig.from_env(dotenv_path=".env"))
+session.start_transaction("SE16")
+
+# 1. Por SUFIJO de id: el prefijo (wnd[0]/usr/...) puede cambiar; el final no.
+#    Pon el último tramo del id que viste en el .vbs (paso 5), p.ej. el del botón ejecutar.
+boton = session.find_by_id_suffix("btn[8]")          # raise_=False -> None si no está
+print("Por sufijo:", None if boton is None else (boton.type, boton.id))
+
+# 2. Por NOMBRE + tipo (solo fiable en campos de dynpro, que sí tienen Name).
+campo = session.find_by_name("DATABROWSE-TABLENAME", "GuiCTextField", raise_=False)
+print("Por nombre:", None if campo is None else (campo.id, campo.name))
+
+# 3. TODAS las coincidencias por nombre + tipo (lista, vacía si no hay).
+botones = session.find_all_by_name("btn[0]", "GuiButton")
+print("Coincidencias:", [b.id for b in botones])
+
+# 4. Acotar la búsqueda a un contenedor (más rápido y preciso que toda la sesión).
+area = session.find("wnd[0]/usr")
+dentro = session.find_by_id_suffix("TABLENAME", root=area, raise_=False)
+print("Dentro de usr:", None if dentro is None else dentro.id)
+```
+
+Ejecuta:
+```bash
+python demo_d.py
+```
+
+**Qué validas:** `find_by_id_suffix` (con y sin `root`), `find_by_name`,
+`find_all_by_name`, y el modo `raise_=False` (devuelve `None`/lista vacía en vez
+de excepción) para inspeccionar sin romper.
+
+> Cuándo usar cada uno:
+> - **`find` / `find_as`** — path estable (lo normal). Siguen siendo la opción por defecto.
+> - **`find_by_id_suffix`** — el prefijo cambia pero el final del id es estable. La más robusta.
+> - **`find_by_name`** — campos de dynpro con `Name` significativo (la mayoría de
+>   controles **no** lo tiene; si devuelve `None`, usa el sufijo de id).
+>
+> Truco: `scripts/buscar_id_parcial.py <sufijo>` hace la búsqueda por sufijo
+> contra la sesión abierta sin escribir código.
+
+---
+
+## 10. Problemas y cómo reportarlos
 
 Cuando algo falle, mándame **este bloque** para que lo diagnostique:
 
@@ -280,14 +334,15 @@ print(comp.type, comp.id, comp.text)   # qué control es de verdad
 
 ---
 
-## 10. Checklist de validación del demo
+## 11. Checklist de validación del demo
 
 - [ ] Paso 2: `pytest` verde sin SAP.
 - [ ] Paso 4: `open_sap.py` deja la sesión lista (login automático).
 - [ ] Paso 6: abre transacción y lee estado.
 - [ ] Paso 7: escribe en un campo tipado y verifica sin error.
 - [ ] Paso 8: Page Object + Process devuelven un `ProcessReport` con `ok=True`.
+- [ ] Paso 9: búsqueda por sufijo de id / nombre localiza un control sin path completo.
 
 Cuando completes (o se rompa) cada casilla, me dices cuál y con el bloque del
-paso 9 lo ajustamos. Este demo es exploratorio: esperamos encontrar paths que
+paso 10 lo ajustamos. Este demo es exploratorio: esperamos encontrar paths que
 recapturar y esperas (`wait_for`) que afinar — es justo lo que vamos a aprender.

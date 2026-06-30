@@ -8,6 +8,8 @@ mapeo dinámico de objetos SAP por `id`/`path` y autocompletado de métodos en e
 ## Características
 
 - **Runtime COM tipado**: engancha a SAP GUI corriendo y expone `session.find(path)`.
+- **Búsqueda robusta**: cuando el path es inestable (filas, subscreens), localiza
+  por sufijo de id (`find_by_id_suffix`) o por nombre (`find_by_name` / `find_all_by_name`).
 - **Wrappers tipados** de objetos `Gui*` (generados desde el PDF oficial) → autocompletado real.
 - **Mapping dinámico**: nombres lógicos → paths SAP (cambias un path en un solo sitio).
 - **Steps / Process**: unidades atómicas medibles, reintentables y con telemetría.
@@ -17,7 +19,7 @@ mapeo dinámico de objetos SAP por `id`/`path` y autocompletado de métodos en e
 ## Requisitos
 
 - Windows con SAP GUI instalado y **scripting habilitado** (cliente y servidor).
-- Python 3.12+
+- Python 3.11+
 - `pywin32`
 
 ## Instalación (dev)

@@ -75,6 +75,30 @@ referencia los ADR y commits relevantes.
   `pysap` y en `pysap.mapping` (`PageObject`, `Field`).
 - Tests: 86 verde (+10), `ruff` limpio. ADR-0005 registrado.
 
+## 2026-06-30 — Búsqueda robusta de componentes (ADR-0006)
+
+- **Problema**: `find`/`find_as` exigen el path exacto; en SAP real el prefijo es
+  inestable (índices de fila, subscreens, dynpros). Se añaden modos de búsqueda
+  que no dependen del path completo.
+- **`Session`** (nuevos métodos de localización):
+  - `find_by_id_suffix(suffix, *, root=None, raise_=True)` — recorre `Children`
+    en profundidad y devuelve el primer control cuyo `id` termine en `suffix`.
+  - `find_by_name(name, sap_type, *, raise_=True)` — COM `findByName` (primer
+    match por nombre + tipo).
+  - `find_all_by_name(name, sap_type)` — COM `findAllByName` (lista de wrappers).
+  - Todos devuelven `GuiComponent` y respetan el contrato de `find`
+    (`ComponentNotFoundError`, o `None` con `raise_=False`).
+- **Integración**: la antigua `buscar_por_id_parcial` (script suelto) queda
+  absorbida por `find_by_id_suffix` con manejo de errores honesto (sin
+  `except: pass`). `scripts/buscar_id_parcial.py` reescrito como demo que llama a
+  la API del paquete.
+- **Diseño**: los métodos viven en `Session`, **no** se duplican en `PageObject`
+  (el Page Object modela path estable; ver ADR-0006). Si un path mapeado se
+  rompe, la evolución será dar estrategias al `PathRegistry`, no inflar el Page
+  Object.
+- Mock ampliado (`Children` jerárquico, `__iter__`, `findByName`,
+  `findAllByName`). Tests: 96 verde (+10), `ruff` limpio. ADR-0006 registrado.
+
 ### Pendiente (fases siguientes)
 - Codegen: encadenar la jerarquía SAP completa para tipar también los miembros
   heredados (hoy funcionan por delegación, sin tipo estático).

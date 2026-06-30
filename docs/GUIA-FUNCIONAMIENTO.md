@@ -119,6 +119,20 @@ métodos:
 - `find_as(path, kind)` → igual, pero devuelve el **wrapper tipado** que indiques
   (`GuiButton`, `GuiTextField`, …). Esto da autocompletado fuerte en el editor.
 
+**Localizar cuando el path es inestable** (ADR-0006). En SAP real el prefijo del
+path cambia (índices de fila, subscreens, dynpros). Estos modos no dependen del
+path completo y devuelven `GuiComponent` (lanzan `ComponentNotFoundError`, o
+`None` con `raise_=False`):
+- `find_by_id_suffix(suffix, *, root=None)` → recorre `Children` en profundidad y
+  devuelve el primer control cuyo `id` **termine** en `suffix`. Para paths con
+  prefijo variable y final estable (`.../btnGUARDAR`). Integra la antigua
+  `buscar_por_id_parcial`.
+- `find_by_name(name, sap_type)` → COM `findByName`: primer control por **nombre +
+  tipo**. Solo fiable en objetos de dynpro (la mayoría de controles no tiene
+  `Name` útil).
+- `find_all_by_name(name, sap_type)` → COM `findAllByName`: **todas** las
+  coincidencias como lista (vacía si no hay).
+
 **Acciones de alto nivel**
 - `start_transaction(tcode)` → escribe `/n{tcode}` en el campo de comando y
   manda Enter.
@@ -292,7 +306,7 @@ inspeccionable.
 en un solo sitio. Si SAP cambia la UI, ajustas un único registro.
 
 Métodos: `register(name, path)`, `path(name)` (lanza `KeyError` claro si falta),
-`__contains__`, `__len__`. Los Page Objects de la Fase 4 se construirán encima.
+`__contains__`, `__len__`. Los Page Objects (Fase 4) se construyen encima.
 
 ---
 
@@ -340,9 +354,9 @@ pasan los falsos.
 
 | Fake | Emula | Detalle |
 |------|-------|---------|
-| `FakeComponent` | un control `Gui*` | `Id/Type/Name/Text/MessageType` + `Press`/`SetFocus`/`sendVKey`; registra `pressed`/`focused`/`vkeys` para aserciones |
-| `FakeChildren` | colección COM `Children` | `Count` + `__call__(index)` |
-| `FakeSession` | `GuiSession` | dict `path → FakeComponent`; `findById(path, raise)` |
+| `FakeComponent` | un control `Gui*` | `Id/Type/Name/Text/MessageType` + `Press`/`SetFocus`/`sendVKey`; `Children`/`add_child` (árbol para `find_by_id_suffix`); registra `pressed`/`focused`/`vkeys` para aserciones |
+| `FakeChildren` | colección COM `Children` | `Count` + `__call__(index)` + `__iter__` |
+| `FakeSession` | `GuiSession` | dict `path → FakeComponent`; `findById(path, raise)`, `findByName`/`findAllByName`, `Children` (raíz) |
 | `FakeSessionInfo` | `GuiSessionInfo` | `User`, `Client`, `Transaction` |
 | `FakeConnection` / `FakeApplication` | conexión / raíz | `OpenConnection` crea una sesión con la pantalla de login poblada |
 | `build_app(session)` | atajo | app con 1 conexión y 1 sesión |
@@ -389,14 +403,16 @@ A partir de ahí operas: `session.start_transaction("VA01")`,
 
 ## 13. Estado y pendientes
 
-Funcionando hoy (36 tests verde): runtime completo, conexión dual
+Funcionando hoy (96 tests verde): runtime completo, conexión dual
 (attach + open), arranque, login, feedback, Steps/Process, telemetría, config,
-entrypoint.
+entrypoint, codegen (Fase 3), Page Objects + validación de tipo (Fase 4) y
+búsqueda robusta de componentes por sufijo de id / nombre (ADR-0006).
 
 Pendiente:
-- **Fase 3** — `codegen/`: parser del PDF → 14 wrappers core + `.pyi`.
-- **Fase 4** — `mapping/page_object.py`; validación de tipo opcional en
-  `find_as`.
-- **Tooling** — `pip install -r requirements-dev.txt` para `ruff`.
+- **Codegen** — encadenar la jerarquía SAP completa para tipar también los
+  miembros heredados (hoy funcionan por delegación COM, sin tipo estático).
+- **Mapping** — si un path mapeado se vuelve inestable, dar estrategias de
+  resolución (exacto/sufijo/nombre) al `PathRegistry` (ADR-0006, pospuesto).
+- **Telemetría avanzada** — agregados/percentiles sobre `ProcessReport`.
 
 Ver `docs/CHANGELOG.md` y `docs/decisions/` para el detalle y el *porqué*.

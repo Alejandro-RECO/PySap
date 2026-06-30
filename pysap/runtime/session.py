@@ -40,6 +40,93 @@ class Session:
             raise ComponentNotFoundError(path)
         return GuiComponent(com_obj)
 
+    def find_by_name(
+        self, name: str, sap_type: str, *, raise_: bool = True
+    ) -> GuiComponent | None:
+        """Localiza el primer descendiente por ``Name`` + tipo SAP.
+
+        Alternativa a :meth:`find` cuando el ``id`` no es estable (índices
+        dinámicos) pero el nombre sí. Equivale a COM ``findByName(Name, Type)``,
+        que devuelve solo la primera coincidencia (ver :meth:`find_all_by_name`
+        para todas)::
+
+            campo = session.find_by_name("RSYST-BNAME", "GuiTextField")
+
+        Args:
+            name: valor de la propiedad ``Name`` del control.
+            sap_type: tipo SAP esperado (p.ej. ``"GuiButton"``).
+            raise_: si ``True`` (por defecto) lanza :class:`ComponentNotFoundError`
+                cuando no hay coincidencia; si ``False`` devuelve ``None``.
+        """
+        try:
+            com_obj = self._com.findByName(name, sap_type)
+        except Exception:
+            # findByName lanza excepción COM si no encuentra (no admite raise=False).
+            com_obj = None
+        if com_obj is None:
+            if raise_:
+                raise ComponentNotFoundError(f"name={name!r} type={sap_type!r}")
+            return None
+        return GuiComponent(com_obj)
+
+    def find_all_by_name(self, name: str, sap_type: str) -> list[GuiComponent]:
+        """Devuelve todos los descendientes con ``Name`` + tipo dados.
+
+        Equivale a COM ``findAllByName``. Lista vacía si no hay ninguno.
+        """
+        coll = self._com.findAllByName(name, sap_type)
+        return [GuiComponent(coll(i)) for i in range(coll.Count)]
+
+    def find_by_id_suffix(
+        self,
+        suffix: str,
+        *,
+        root: GuiComponent | Any = None,
+        raise_: bool = True,
+    ) -> GuiComponent | None:
+        """Busca recursivamente un control cuyo ``id`` termine en ``suffix``.
+
+        Útil cuando SAP cambia el prefijo del path (índices de fila, subscreens)
+        pero el final del ``id`` es estable. Recorre el árbol ``Children`` y
+        devuelve la primera coincidencia en orden de profundidad::
+
+            boton = session.find_by_id_suffix("btnGUARDAR")
+
+        Args:
+            suffix: cadena con la que debe terminar el ``id``.
+            root: contenedor desde el que buscar (wrapper o COM). Por defecto,
+                la raíz de la sesión.
+            raise_: si ``True`` (por defecto) lanza :class:`ComponentNotFoundError`
+                cuando no hay coincidencia; si ``False`` devuelve ``None``.
+        """
+        if isinstance(root, GuiComponent):
+            container = root.com
+        else:
+            container = root if root is not None else self._com
+        com_obj = self._search_id_suffix(container, suffix)
+        if com_obj is None:
+            if raise_:
+                raise ComponentNotFoundError(f"*{suffix}")
+            return None
+        return GuiComponent(com_obj)
+
+    @staticmethod
+    def _search_id_suffix(container: Any, suffix: str) -> Any:
+        """Recorrido en profundidad de ``Children`` buscando un ``id`` por sufijo."""
+        try:
+            children = container.Children
+        except Exception:
+            # Un control hoja puede no exponer Children.
+            return None
+        for i in range(children.Count):
+            child = children(i)
+            if child.Id.endswith(suffix):
+                return child
+            found = Session._search_id_suffix(child, suffix)
+            if found is not None:
+                return found
+        return None
+
     def find_as(self, path: str, kind: type[T], *, validate: bool = False) -> T:
         """Como :meth:`find` pero devuelve el tipo de wrapper indicado.
 

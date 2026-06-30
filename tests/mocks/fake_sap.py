@@ -29,10 +29,21 @@ class FakeComponent:
         self.Text = text
         # Solo relevante en la barra de estado (S/W/E/A/I).
         self.MessageType = message_type
+        # Hijos para emular el árbol de contenedores (Children).
+        self._children: list[FakeComponent] = []
         # Banderas observables por los tests.
         self.pressed = False
         self.focused = False
         self.vkeys: list[int] = []
+
+    def add_child(self, child: FakeComponent) -> FakeComponent:
+        """Cuelga un componente como hijo directo (para árboles de prueba)."""
+        self._children.append(child)
+        return child
+
+    @property
+    def Children(self) -> FakeChildren:
+        return FakeChildren(self._children)
 
     def Press(self) -> None:
         self.pressed = True
@@ -57,6 +68,9 @@ class FakeChildren:
     def __call__(self, index: int) -> Any:
         return self._items[index]
 
+    def __iter__(self) -> Any:
+        return iter(self._items)
+
 
 class FakeSession:
     """Sesión SAP falsa con un diccionario path -> FakeComponent."""
@@ -69,11 +83,26 @@ class FakeSession:
         self._components[component.Id] = component
         return component
 
+    @property
+    def Children(self) -> FakeChildren:
+        """Raíz del árbol: expone los componentes registrados como hijos."""
+        return FakeChildren(list(self._components.values()))
+
     def findById(self, path: str, raise_on_missing: Any = True) -> Any:
         comp = self._components.get(path)
         if comp is None and raise_on_missing:
             raise Exception(f"control could not be found by id {path}")
         return comp
+
+    def findByName(self, name: str, type: str) -> Any:
+        for comp in self._components.values():
+            if comp.Name == name and comp.Type == type:
+                return comp
+        raise Exception(f"control could not be found by name {name}/{type}")
+
+    def findAllByName(self, name: str, type: str) -> FakeChildren:
+        hits = [c for c in self._components.values() if c.Name == name and c.Type == type]
+        return FakeChildren(hits)
 
 
 class FakeSessionInfo:
