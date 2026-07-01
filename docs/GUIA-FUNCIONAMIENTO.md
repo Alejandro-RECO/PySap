@@ -58,12 +58,12 @@ PySap opera en un nivel de esta jerarquía.
 | Paquete | Responsabilidad | Archivos clave |
 |---------|-----------------|----------------|
 | `pysap/runtime/` | Conexión COM, sesión, arranque, errores, feedback | `connector.py`, `session.py`, `launcher.py`, `bootstrap.py`, `feedback.py`, `errors.py` |
-| `pysap/objects/` | Wrappers tipados de componentes `Gui*` | `base.py`, `gui_button.py`, `gui_textfield.py` |
+| `pysap/objects/` | Wrappers tipados de componentes `Gui*` (`base.py` a mano; el resto generados) | `base.py`, `gui_button.py`, `gui_textfield.py`, `gui_c_text_field.py`, `gui_combo_box.py`, … (15 en total) |
 | `pysap/process/` | Unidades de ejecución medibles y reintentables | `step.py`, `process.py` |
 | `pysap/telemetry/` | Estructuras de medición | `metrics.py` |
-| `pysap/mapping/` | Nombres lógicos → paths SAP | `registry.py` |
+| `pysap/mapping/` | Nombres lógicos → paths SAP + Page Objects | `registry.py`, `page_object.py` |
 | `pysap/config.py` | Config/credenciales desde el entorno | `config.py` |
-| `pysap/codegen/` | (Fase 3, pendiente) generar wrappers desde el PDF | — |
+| `pysap/codegen/` | Genera wrappers `Gui*` desde el PDF de la API (ADR-0004) | `pdf_parser.py`, `emitter.py`, `typemap.py`, `normalize.py`, `generate.py` |
 | `scripts/` | Entrypoint ejecutable | `open_sap.py` |
 | `tests/` | Unit (mock) + integración + capa mock | `tests/mocks/fake_sap.py` |
 
@@ -227,15 +227,21 @@ propiedades comunes: `id`, `type`, `name`, `text` (con setter). El truco clave:
 - `_com` se asigna por `object.__setattr__` para no disparar la delegación.
 - `com` *(property)* expone el COM crudo; `__repr__` muestra `id`/`type`.
 
-### 5.2 `gui_button.py` / `gui_textfield.py`
+### 5.2 Wrappers concretos (`gui_button.py`, `gui_textfield.py`, …)
 
 Heredan de `GuiComponent` y añaden la API específica del control:
 
 - **`GuiButton`**: `press()`, `left_label`, `right_label`.
 - **`GuiTextField`**: `value` (get/set), `max_length`, `required`, `set_focus()`.
 
-Estos dos están escritos a mano como muestra; **Fase 3** (`codegen/`) generará
-~14 wrappers core + sus `.pyi` desde el PDF oficial de la API.
+Hoy hay **15 wrappers** en `objects/` (`GuiButton`, `GuiTextField`,
+`GuiCTextField`, `GuiComboBox`, `GuiCheckBox`, `GuiRadioButton`, `GuiGridView`,
+`GuiTree`, `GuiStatusbar`, `GuiMainWindow`, `GuiPasswordField`, `GuiApplication`,
+`GuiConnection`, `GuiSession`, y la base `GuiComponent`). Todos salvo `base.py`
+los **genera `pysap.codegen`** desde el PDF oficial de la API (ADR-0004, Fase 3);
+llevan la cabecera "GENERADO — NO EDITAR" y se regeneran, no se tocan a mano.
+Aunque un wrapper no cubra una propiedad, la delegación COM de `GuiComponent`
+(`__getattr__`) hace que siga siendo usable.
 
 ---
 
@@ -301,14 +307,45 @@ inspeccionable.
 
 ---
 
-## 8. Mapping — `registry.py`
+## 8. Mapping — `registry.py` + `page_object.py`
+
+### 8.1 `PathRegistry` — nombres lógicos → paths
 
 `PathRegistry` es un mapa **nombre lógico → path SAP**. En vez de esparcir
 `wnd[0]/tbar[0]/btn[0]` por todo el código, registras `boton_guardar` → ese path
 en un solo sitio. Si SAP cambia la UI, ajustas un único registro.
 
 Métodos: `register(name, path)`, `path(name)` (lanza `KeyError` claro si falta),
-`__contains__`, `__len__`. Los Page Objects (Fase 4) se construyen encima.
+`__contains__`, `__len__`.
+
+### 8.2 `PageObject` y `Field` — modelar una pantalla (ADR-0005)
+
+Encima del registry, un **Page Object** representa una pantalla SAP y expone sus
+controles como atributos limpios. Une una `Session` con un `PathRegistry`:
+
+- **`PageObject(session, registry)`** — guarda ambos. Métodos:
+  - `find(name)` → resuelve `name` contra el registry y devuelve el control sin
+    tipar (`session.find(path)`).
+  - `find_as(name, kind, *, validate=True)` → igual pero devuelve el wrapper
+    tipado y **valida el tipo por defecto** (un path mal mapeado se detecta al
+    instante con `ComponentTypeError`).
+
+- **`Field(name, kind=None)`** — descriptor para declarar un control como atributo
+  de clase:
+
+  ```python
+  class LoginPage(PageObject):
+      mandante = Field("mandante", GuiTextField)
+  ```
+
+  Cada acceso a `page.mandante` **re-resuelve** el control (llama a `find`/`find_as`
+  por debajo). **No cachea a propósito**: tras acciones que refrescan la pantalla
+  las referencias COM viejas se invalidan, así que re-localizar siempre es lo
+  correcto. Con `kind=None` devuelve genérico; con `kind` devuelve tipado y
+  validado.
+
+Así una automatización usa `page.mandante.value = "100"` sin ver un solo path.
+Es el patrón que arma el Demo C (ver `docs/DEMO-PASO-A-PASO.md`).
 
 ---
 
